@@ -78,140 +78,15 @@ func DecodeJSONBody[T any](r *http.Request) (*T, error) {
 
 	defer r.Body.Close()
 
-	err := decoder.Decode(&data)
-	if err != nil {
+	err := decoder.Decode(&data); if err != nil {
 		return nil, err
 	}
+
 	validate := validator.New(validator.WithRequiredStructEnabled())
-	verr := validate.Struct(data)
-	if verr != nil {
+	verr := validate.Struct(data); if verr != nil {
 		return nil, verr
 	}
 
 	return &data, nil
 }
 
-// IMPLEMENTATON TESTS
-
-// type TestUser struct {
-// 	Username string `json:"username" validate:"required"`
-// }
-
-// type Config struct {
-// 	databaseUrl string
-// 	usersUrl    string
-// }
-
-// func LoadConfig() *Config {
-// 	return &Config{
-// 		databaseUrl: "pgsql://test:test",
-// 		usersUrl:    "http://nogen.blocks/users",
-// 	}
-// }
-
-// type Services struct {
-// 	database string
-// 	usersApi string
-// }
-
-// type UserAPI struct {
-// 	GetUser    func(string) string
-// 	CreateUser func(TestUser) (TestUser, error)
-// }
-
-// func DBFactory(config *Config) prik.Factory {
-// 	return func() (interface{}, prik.DisposeFn) {
-// 		dispose := func() {}
-// 		// TODO: access stuff from config to construct db
-// 		return "blockdb", dispose
-// 	}
-// }
-
-// func UserAPIFactory(db prik.Factory) prik.Factory {
-// 	return func() (interface{}, prik.DisposeFn) {
-// 		dispose := func() {}
-// 		return UserAPI{
-// 				GetUser:    func(name string) string { return name },
-// 				CreateUser: func(user TestUser) (TestUser, error) { return user, nil },
-// 			},
-// 			dispose
-// 	}
-// }
-
-// func base(config *Config) func() *prik.Context {
-// 	dbFactory := prik.Shared(DBFactory(config))
-
-// 	return func() *prik.Context {
-// 		factories := prik.Factories{
-// 			"db":      dbFactory,
-// 			"userApi": prik.Shared(UserAPIFactory(dbFactory)),
-// 		}
-
-// 		return prik.CreateContext(factories)
-// 	}
-// }
-
-// func fromRequest(fn func() *prik.Context) func(*http.Request) (*prik.Context, prik.DisposeFn) {
-// 	return func(req *http.Request) (*prik.Context, prik.DisposeFn) {
-// 		// TODO: this is not right .. figure out what to do with the http.Request and also the dispose
-// 		ctx := fn()
-// 		return ctx, ctx.Dispose
-// 	}
-// }
-
-// func testCreateUserHandler(ctx *prik.Context, req *http.Request) Result {
-// 	userApi, err := ctx.Resolve("userApi")
-
-// 	if err != nil {
-// 		return Result{
-// 				Status: 500,
-// 				Body:   "Failed to resolve UserAPI from context",
-// 			}
-// 	}
-
-// 	payload, err := DecodeJSONBody[TestUser](req)
-
-// 	if err != nil {
-// 		return Result{Status: 500, Body: err.Error()}
-// 	}
-
-// 	api := userApi.(UserAPI)
-
-// 	res := api.GetUser(payload.Username)
-
-// 	return Result{Status: 200, Body: res}
-// }
-
-// func getEndpoints() []Endpoint {
-// 	createUserEndpoint := CreateEndpoint(
-// 		"POST",
-// 		"/users",
-// 		testCreateUserHandler,
-// 	)
-
-// 	endpoints := make([]Endpoint, 0)
-// 	endpoints = append(endpoints, createUserEndpoint)
-// 	return endpoints
-// }
-
-// func createApp(config *Config) *echo.Echo {
-// 	// construct the context
-// 	ctx := fromRequest(base(config))
-// 	server := echo.New()
-// 	endpoints := getEndpoints()
-
-// 	CreateEndpoints(ctx, endpoints, server)
-
-// 	return server
-// }
-
-// func main() {
-// 	// construct a config (load from env etc)
-// 	config := LoadConfig()
-
-// 	// Create the app (http server)
-// 	app := createApp(config)
-
-// 	// Start server and listen
-// 	app.Logger.Fatal(app.Start(":1323"))
-// }
