@@ -48,6 +48,14 @@ func CreateEndpoints(context ContextReq, endpoints []Endpoint, server *echo.Echo
 			server.GET(e.Path, route(e))
 		case http.MethodPost:
 			server.POST(e.Path, route(e))
+		case http.MethodPut:
+			server.PUT(e.Path, route(e))
+		case http.MethodDelete:
+			server.DELETE(e.Path, route(e))
+		case http.MethodPatch:
+			server.PATCH(e.Path, route(e))
+		default:
+			panic("Invalid method")
 		}
 	}
 }
