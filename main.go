@@ -17,13 +17,13 @@ type Result struct {
 type Endpoint struct {
 	Method string
 	Path string
-	Handle func(*prik.Context, *http.Request) Result
+	Handle func(*prik.Context, *http.Request) *Result
 }
 
 type Route func(Endpoint) echo.HandlerFunc
 
 type ContextReq func(*http.Request) (*prik.Context, prik.DisposeFn)
-type HandlerFunc func(*prik.Context, *http.Request) Result
+type HandlerFunc func(*prik.Context, *http.Request) *Result
 
 func CreateEndpoint(
 	method string,
@@ -33,7 +33,7 @@ func CreateEndpoint(
 	return Endpoint{
 		Method: method,
 		Path:   path,
-		Handle: func(ctx *prik.Context, req *http.Request) Result {
+		Handle: func(ctx *prik.Context, req *http.Request) *Result {
 			return handlerFunc(ctx, req)
 		},
 	}
