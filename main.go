@@ -10,19 +10,17 @@ import (
 )
 
 type Result struct {
-	Status int `json:"status"`
-	Body string `json:"body"`
+	Status int    `json:"status"`
+	Body   string `json:"body"`
 }
 
 type Endpoint struct {
 	Method string
-	Path string
+	Path   string
 	Handle func(*prik.Context, *http.Request) *Result
 }
 
 type Route func(Endpoint) echo.HandlerFunc
-
-type ContextReq func(*http.Request) (*prik.Context, prik.DisposeFn)
 type HandlerFunc func(*prik.Context, *http.Request) *Result
 
 func CreateEndpoint(
@@ -39,7 +37,7 @@ func CreateEndpoint(
 	}
 }
 
-func CreateEndpoints(context ContextReq, endpoints []Endpoint, server *echo.Echo) {
+func CreateEndpoints(context *prik.Context, endpoints []Endpoint, server *echo.Echo) {
 	route := createRoute(context)
 
 	for _, e := range endpoints {
@@ -60,13 +58,11 @@ func CreateEndpoints(context ContextReq, endpoints []Endpoint, server *echo.Echo
 	}
 }
 
-func createRoute(context ContextReq) Route {
+func createRoute(context *prik.Context) Route {
 	return func(e Endpoint) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			req := c.Request()
-			ctx, dispose := context(req)
-			defer dispose()
-			res := e.Handle(ctx, req)
+			res := e.Handle(context, req)
 			return c.JSON(200, res)
 		}
 	}
@@ -78,15 +74,16 @@ func DecodeJSONBody[T any](r *http.Request) (*T, error) {
 
 	defer r.Body.Close()
 
-	err := decoder.Decode(&data); if err != nil {
+	err := decoder.Decode(&data)
+	if err != nil {
 		return nil, err
 	}
 
 	validate := validator.New(validator.WithRequiredStructEnabled())
-	verr := validate.Struct(data); if verr != nil {
+	verr := validate.Struct(data)
+	if verr != nil {
 		return nil, verr
 	}
 
 	return &data, nil
 }
-
