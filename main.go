@@ -10,13 +10,13 @@ import (
 )
 
 type Result struct {
-	Status int    `json:"status"`
-	Body   string `json:"body"`
+	Status int `json:"status"`
+	Body any `json:"body"`
 }
 
 type Endpoint struct {
 	Method string
-	Path   string
+	Path string
 	Handle func(*prik.Context, *http.Request) *Result
 }
 
@@ -30,7 +30,7 @@ func CreateEndpoint(
 ) Endpoint {
 	return Endpoint{
 		Method: method,
-		Path:   path,
+		Path: path,
 		Handle: func(ctx *prik.Context, req *http.Request) *Result {
 			return handlerFunc(ctx, req)
 		},
@@ -74,14 +74,12 @@ func DecodeJSONBody[T any](r *http.Request) (*T, error) {
 
 	defer r.Body.Close()
 
-	err := decoder.Decode(&data)
-	if err != nil {
+	err := decoder.Decode(&data); if err != nil {
 		return nil, err
 	}
 
 	validate := validator.New(validator.WithRequiredStructEnabled())
-	verr := validate.Struct(data)
-	if verr != nil {
+	verr := validate.Struct(data); if verr != nil {
 		return nil, verr
 	}
 
