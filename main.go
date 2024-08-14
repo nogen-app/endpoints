@@ -13,9 +13,9 @@ type Result struct {
 }
 
 type Endpoint struct {
-	Method string
-	Path string
-	Handle func(*prik.Context, echo.Context) *Result
+	method string
+	path string
+	handle func(*prik.Context, echo.Context) *Result
 }
 
 type Route func(Endpoint) echo.HandlerFunc
@@ -27,9 +27,9 @@ func CreateEndpoint[T any](
 	handlerFunc HandlerFunc[T],
 ) Endpoint {
 	return Endpoint{
-		Method: method,
-		Path: path,
-		Handle: func(ctx *prik.Context, c echo.Context) *Result {
+		method: method,
+		path: path,
+		handle: func(ctx *prik.Context, c echo.Context) *Result {
 			var data T
 
 			if err := c.Bind(data); err != nil {
@@ -51,17 +51,17 @@ func CreateEndpoints(context *prik.Context, endpoints []Endpoint, server *echo.E
 	route := createRoute(context)
 
 	for _, e := range endpoints {
-		switch e.Method {
+		switch e.method {
 		case http.MethodGet:
-			server.GET(e.Path, route(e))
+			server.GET(e.path, route(e))
 		case http.MethodPost:
-			server.POST(e.Path, route(e))
+			server.POST(e.path, route(e))
 		case http.MethodPut:
-			server.PUT(e.Path, route(e))
+			server.PUT(e.path, route(e))
 		case http.MethodDelete:
-			server.DELETE(e.Path, route(e))
+			server.DELETE(e.path, route(e))
 		case http.MethodPatch:
-			server.PATCH(e.Path, route(e))
+			server.PATCH(e.path, route(e))
 		default:
 			panic("Invalid method")
 		}
@@ -71,7 +71,7 @@ func CreateEndpoints(context *prik.Context, endpoints []Endpoint, server *echo.E
 func createRoute(context *prik.Context) Route {
 	return func(e Endpoint) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			res := e.Handle(context, c)
+			res := e.handle(context, c)
 			return c.JSON(200, res)
 		}
 	}
