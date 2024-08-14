@@ -3,6 +3,7 @@ package endpoints
 import (
 	"net/http"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/nogen-app/prik"
 )
@@ -37,7 +38,9 @@ func CreateEndpoint[T any](
 				return &res
 			}
 
-			if err := c.Validate(data); err != nil {
+			validate := validator.New(validator.WithRequiredStructEnabled())
+
+			if err := validate.Struct(data); err != nil {
 				res := Result{Status: http.StatusBadRequest, Body: err.Error()}
 				return &res
 			}
