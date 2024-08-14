@@ -32,7 +32,7 @@ func CreateEndpoint[T any](
 		handle: func(ctx *prik.Context, c echo.Context) *Result {
 			var data T
 
-			if err := c.Bind(data); err != nil {
+			if err := c.Bind(&data); err != nil {
 				res := Result{Status: http.StatusBadRequest, Body: err.Error()}
 				return &res
 			}
