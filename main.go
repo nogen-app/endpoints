@@ -21,6 +21,7 @@ type Endpoint struct {
 
 type Route func(Endpoint) echo.HandlerFunc
 type HandlerFunc[T any] func(*prik.Context, *T) *Result
+type PassthroughFunc func(*prik.Context, *http.Request) *Result
 
 func CreateEndpoint[T any](
 	method string,
@@ -50,6 +51,21 @@ func CreateEndpoint[T any](
 	}
 }
 	
+func CreatePassthroughEndpoint(
+	method string,
+	path string,
+	handlerFunc PassthroughFunc,
+) Endpoint {
+	return Endpoint{
+		method: method,
+		path: path,
+		handle: func(ctx *prik.Context, c echo.Context) *Result {
+			req := c.Request()
+			return handlerFunc(ctx, req)
+		},
+	}
+}
+
 func CreateEndpoints(context *prik.Context, endpoints []Endpoint, server *echo.Echo) {
 	route := createRoute(context)
 
