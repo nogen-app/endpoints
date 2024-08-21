@@ -14,85 +14,99 @@ type Result struct {
 }
 
 type Endpoint struct {
+	tag string
+	json *JSONEndpoint
+	streaming *StreamingEndpoint
+}
+
+type JSONHandlerFunc[T any] func(*prik.Context, *T) *Result
+type StreamingHandlerFunc func(*prik.Context, echo.Context) *http.Response
+
+type JSONEndpoint struct {
 	method string
 	path string
 	handle func(*prik.Context, echo.Context) *Result
 }
 
-type Route func(Endpoint) echo.HandlerFunc
-type HandlerFunc[T any] func(*prik.Context, *T) *Result
-type PassthroughFunc func(*prik.Context, *http.Request) *Result
+type StreamingEndpoint struct {
+	method string
+	path string
+	handle func(*prik.Context, echo.Context) *http.Response
+}
 
-func CreateEndpoint[T any](
+type Route func(Endpoint) echo.HandlerFunc
+
+func CreateJSONEndpoint[T any](
 	method string,
 	path string,
-	handlerFunc HandlerFunc[T],
+	handlerFunc JSONHandlerFunc[T],
 ) Endpoint {
-	return Endpoint{
+	e :=  JSONEndpoint{
 		method: method,
 		path: path,
 		handle: func(ctx *prik.Context, c echo.Context) *Result {
 			var data T
 
 			if err := c.Bind(&data); err != nil {
-				res := Result{Status: http.StatusBadRequest, Body: err.Error()}
-				return &res
+				return &Result{Status: http.StatusBadRequest, Body: err.Error()}
 			}
 
 			validate := validator.New(validator.WithRequiredStructEnabled())
 
 			if err := validate.Struct(data); err != nil {
-				res := Result{Status: http.StatusBadRequest, Body: err.Error()}
-				return &res
+				return &Result{Status: http.StatusBadRequest, Body: err.Error()}
 			}
 
 			return handlerFunc(ctx, &data)
 		},
 	}
+
+	return Endpoint{tag: "json", json: &e}
 }
-	
-func CreatePassthroughEndpoint(
+
+func CreateStreamingEndpoint(
 	method string,
 	path string,
-	handlerFunc PassthroughFunc,
+	handlerFunc StreamingHandlerFunc,
 ) Endpoint {
-	return Endpoint{
+	e := StreamingEndpoint{
 		method: method,
 		path: path,
-		handle: func(ctx *prik.Context, c echo.Context) *Result {
-			req := c.Request()
-			return handlerFunc(ctx, req)
+		handle: func(ctx *prik.Context, c echo.Context) *http.Response {
+			return handlerFunc(ctx, c)
 		},
 	}
+
+	return Endpoint{tag: "streaming", streaming: &e}
 }
 
 func CreateEndpoints(context *prik.Context, endpoints []Endpoint, server *echo.Echo) {
-	route := createRoute(context)
-
 	for _, e := range endpoints {
-		switch e.method {
-		case http.MethodGet:
-			server.GET(e.path, route(e))
-		case http.MethodPost:
-			server.POST(e.path, route(e))
-		case http.MethodPut:
-			server.PUT(e.path, route(e))
-		case http.MethodDelete:
-			server.DELETE(e.path, route(e))
-		case http.MethodPatch:
-			server.PATCH(e.path, route(e))
-		default:
-			panic("Invalid method")
+		switch e.tag {
+		case "json":
+			route := createJSONRoute(context)(e)
+			server.Add(e.json.method, e.json.path, route)
+		case "streaming":
+			route := createStreamingRoute(context)(e)
+			server.Add(e.streaming.method, e.streaming.path, route)
 		}
 	}
 }
 
-func createRoute(context *prik.Context) Route {
+func createJSONRoute(context *prik.Context) Route {
 	return func(e Endpoint) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			res := e.handle(context, c)
+			res := e.json.handle(context, c)
 			return c.JSON(200, res)
 		}
 	}
 }
 
+func createStreamingRoute(context *prik.Context) Route {
+	return func(e Endpoint) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			res := e.streaming.handle(context, c)
+			return c.Stream(200, "application/octet-stream", res.Body)
+		}
+	}
+}
