@@ -19,9 +19,6 @@ type Endpoint struct {
 	streaming *StreamingEndpoint
 }
 
-type JSONHandlerFunc[T any] func(*prik.Context, *T) *Result
-type StreamingHandlerFunc func(*prik.Context, echo.Context) *http.Response
-
 type JSONEndpoint struct {
 	method string
 	path string
@@ -39,9 +36,9 @@ type Route func(Endpoint) echo.HandlerFunc
 func CreateJSONEndpoint[T any](
 	method string,
 	path string,
-	handlerFunc JSONHandlerFunc[T],
+	handlerFunc func(*prik.Context, *T) *Result,
 ) Endpoint {
-	e :=  JSONEndpoint{
+	e := JSONEndpoint{
 		method: method,
 		path: path,
 		handle: func(ctx *prik.Context, c echo.Context) *Result {
@@ -67,13 +64,13 @@ func CreateJSONEndpoint[T any](
 func CreateStreamingEndpoint(
 	method string,
 	path string,
-	handlerFunc StreamingHandlerFunc,
+	handlerFunc func(*prik.Context, *http.Request) *http.Response,
 ) Endpoint {
 	e := StreamingEndpoint{
 		method: method,
 		path: path,
 		handle: func(ctx *prik.Context, c echo.Context) *http.Response {
-			return handlerFunc(ctx, c)
+			return handlerFunc(ctx, c.Request())
 		},
 	}
 
