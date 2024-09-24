@@ -77,15 +77,15 @@ func CreateStreamingEndpoint(
 	return Endpoint{tag: "streaming", streaming: &e}
 }
 
-func ApplyEndpoints(context *prik.Context, endpoints []Endpoint, server *echo.Echo) {
+func ApplyEndpoints(context *prik.Context, endpoints []Endpoint, server *echo.Echo, m ...echo.MiddlewareFunc) {
 	for _, e := range endpoints {
 		switch e.tag {
 		case "json":
 			route := createJSONRoute(context)(e)
-			server.Add(e.json.method, e.json.path, route)
+			server.Add(e.json.method, e.json.path, route, m...)
 		case "streaming":
 			route := createStreamingRoute(context)(e)
-			server.Add(e.streaming.method, e.streaming.path, route)
+			server.Add(e.streaming.method, e.streaming.path, route, m...)
 		}
 	}
 }
