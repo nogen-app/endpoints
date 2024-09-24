@@ -77,7 +77,7 @@ func CreateStreamingEndpoint(
 	return Endpoint{tag: "streaming", streaming: &e}
 }
 
-func CreateEndpoints(context *prik.Context, endpoints []Endpoint, server *echo.Echo) {
+func ApplyEndpoints(context *prik.Context, endpoints []Endpoint, server *echo.Echo) {
 	for _, e := range endpoints {
 		switch e.tag {
 		case "json":
