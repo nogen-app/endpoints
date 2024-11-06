@@ -48,6 +48,10 @@ func CreateJSONEndpoint[T any](
 				return &Result{Status: http.StatusBadRequest, Body: err.Error()}
 			}
 
+			if err := c.BindHeader(&data); err != nil {
+				return &Result{Status: http.StatusBadRequest, Body: err.Error()}
+			}
+
 			validate := validator.New(validator.WithRequiredStructEnabled())
 
 			if err := validate.Struct(data); err != nil {
@@ -107,3 +111,4 @@ func createStreamingRoute(context *prik.Context) Route {
 		}
 	}
 }
+
