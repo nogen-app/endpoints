@@ -42,13 +42,11 @@ func CreateJSONEndpoint[T any](
 		method: method,
 		path: path,
 		handle: func(ctx *prik.Context, c echo.Context) *Result {
+			b := new(CustomDataBinder)
+
 			var data T
 
-			if err := c.Bind(&data); err != nil {
-				return &Result{Status: http.StatusBadRequest, Body: err.Error()}
-			}
-
-			if err := c.BindHeader(&data); err != nil {
+			if err := b.BindWithHeaders(&data, c); err != nil {
 				return &Result{Status: http.StatusBadRequest, Body: err.Error()}
 			}
 
@@ -112,3 +110,18 @@ func createStreamingRoute(context *prik.Context) Route {
 	}
 }
 
+type CustomDataBinder struct {
+	echo.DefaultBinder
+}
+
+func (b *CustomDataBinder) BindWithHeaders(i interface{}, c echo.Context) error {
+	if err := b.Bind(i, c); err != nil {
+		return err
+	}
+
+	if err := b.BindHeaders(c, i); err != nil {
+		return err
+	}
+
+	return nil
+}
