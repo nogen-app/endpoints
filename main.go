@@ -1,7 +1,9 @@
 package endpoints
 
 import (
+	"mime/multipart"
 	"net/http"
+	"reflect"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
@@ -46,7 +48,7 @@ func CreateJSONEndpoint[T any](
 
 			var data T
 
-			if err := b.BindWithHeaders(&data, c); err != nil {
+			if err := b.CustomDataBinder(&data, c); err != nil {
 				return &Result{Status: http.StatusBadRequest, Body: err.Error()}
 			}
 
@@ -114,13 +116,46 @@ type CustomDataBinder struct {
 	echo.DefaultBinder
 }
 
-func (b *CustomDataBinder) BindWithHeaders(i interface{}, c echo.Context) error {
+func (b *CustomDataBinder) CustomDataBinder(i interface{}, c echo.Context) error {
 	if err := b.Bind(i, c); err != nil {
 		return err
 	}
 
 	if err := b.BindHeaders(c, i); err != nil {
 		return err
+	}
+
+	if err := bindFiles(i, c); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func bindFiles(i interface{}, c echo.Context) error {
+	val := reflect.ValueOf(i)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+
+	typ := val.Type()
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+
+		if field.Type == reflect.TypeOf((*multipart.FileHeader)(nil)) {
+			tag := field.Tag.Get("form"); if tag == "" {
+				continue
+			}
+
+			file, err := c.FormFile(tag); if err != nil {
+				if err == http.ErrMissingFile {
+					continue
+				}
+				return err
+			}
+
+			val.Field(i).Set(reflect.ValueOf(file))
+		}
 	}
 
 	return nil
