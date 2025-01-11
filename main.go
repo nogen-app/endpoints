@@ -1,9 +1,11 @@
 package endpoints
 
 import (
+	"fmt"
 	"mime/multipart"
 	"net/http"
 	"reflect"
+	"strconv"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
@@ -143,15 +145,26 @@ func bindFiles(i interface{}, c echo.Context) error {
 		field := typ.Field(i)
 
 		if field.Type == reflect.TypeOf((*multipart.FileHeader)(nil)) {
-			tag := field.Tag.Get("form"); if tag == "" {
+			formTag := field.Tag.Get("form"); if formTag == "" {
 				continue
 			}
+			maxSizeTag := field.Tag.Get("maxSize")
 
-			file, err := c.FormFile(tag); if err != nil {
+			file, err := c.FormFile(formTag); if err != nil {
 				if err == http.ErrMissingFile {
 					continue
 				}
 				return err
+			}
+
+			if maxSizeTag != "" {
+				maxSize, err := strconv.ParseInt(maxSizeTag, 10, 64); if err != nil {
+					return fmt.Errorf("maxSize tag must be an integer")
+				}
+
+				if file.Size > maxSize {
+					return fmt.Errorf("file size exceeds the maximum size of %d bytes", maxSize)
+				}
 			}
 
 			val.Field(i).Set(reflect.ValueOf(file))
